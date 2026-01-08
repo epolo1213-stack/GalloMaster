@@ -1,0 +1,8 @@
+{
+  "name": "GalloMaster",
+  "description": "Una plataforma integral para la gestión profesional de crianza, salud, pedigrí y entrenamiento de aves de combate de alta genética.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
