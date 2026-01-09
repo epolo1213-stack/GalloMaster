@@ -2,7 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Fix: Use process.env.API_KEY directly when initializing the GoogleGenAI instance
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 
 export const getExpertAdvice = async (prompt: string, context?: any) => {
   try {
