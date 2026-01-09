@@ -1,16 +1,18 @@
 
 import React, { useState, useRef } from 'react';
 import { Bird as BirdType, BirdStatus, Gender, TrainingLog } from '../types';
-import { Plus, X, Upload, Dna, Info, Calendar, Weight, Save, AlertTriangle, Trophy, FileText, Printer, ShieldCheck, Heart, Medal } from 'lucide-react';
+import { Plus, X, Upload, Dna, Info, Calendar, Weight, Save, AlertTriangle, Trophy, FileText, Printer, ShieldCheck, Heart, Medal, Trash2 } from 'lucide-react';
 
 interface BirdListProps {
   birds: BirdType[];
   onAddBird: (bird: BirdType) => void;
   onUpdateBird: (bird: BirdType) => void;
+  onDeleteBird: (id: string) => void;
   trainingLogs?: TrainingLog[];
+  farmName: string;
 }
 
-const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, trainingLogs = [] }) => {
+const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, onDeleteBird, trainingLogs = [], farmName }) => {
   const [filter, setFilter] = useState<BirdStatus | 'ALL'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBird, setSelectedBird] = useState<BirdType | null>(null);
@@ -60,6 +62,14 @@ const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, tra
     setImagePreview(null);
   };
 
+  const confirmDelete = (e: React.MouseEvent, id: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation(); 
+    if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${name}"?`)) {
+      onDeleteBird(id);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -96,12 +106,21 @@ const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, tra
           <div 
             key={bird.id} 
             onClick={() => setSelectedBird(bird)}
-            className={`bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/30 transition-all group cursor-pointer shadow-xl ${
+            className={`bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/30 transition-all group cursor-pointer shadow-xl relative ${
               bird.status === BirdStatus.DECEASED || bird.status === BirdStatus.SOLD ? 'opacity-60 grayscale-[0.3]' : ''
             }`}
           >
             <div className="relative h-48">
               <img src={bird.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              
+              <button 
+                onClick={(e) => confirmDelete(e, bird.id, bird.name)}
+                className="absolute top-3 right-3 p-2.5 bg-rose-500/90 hover:bg-rose-600 text-white rounded-xl backdrop-blur-md md:opacity-0 md:group-hover:opacity-100 transition-all z-20 shadow-lg border border-rose-400/20"
+                aria-label="Borrar ave"
+              >
+                <Trash2 size={18} />
+              </button>
+
               <div className="absolute top-3 left-3 flex gap-2">
                 <span className="bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold text-white uppercase tracking-wider">{bird.plate}</span>
                 <span className={`bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold ${bird.gender === Gender.MALE ? 'text-blue-400' : 'text-pink-400'}`}>{bird.gender}</span>
@@ -189,14 +208,14 @@ const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, tra
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Padre (Semental)</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-2 ml-1">Padre (Semental)</label>
                   <select className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white appearance-none" onChange={e => setNewBird({...newBird, fatherId: e.target.value})}>
                     <option value="">Desconocido</option>
                     {birds.filter(b => b.gender === Gender.MALE).map(b => <option key={b.id} value={b.id}>{b.name} ({b.plate})</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1">Madre (Gallina)</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-2 ml-1">Madre (Gallina)</label>
                   <select className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white appearance-none" onChange={e => setNewBird({...newBird, motherId: e.target.value})}>
                     <option value="">Desconocida</option>
                     {birds.filter(b => b.gender === Gender.FEMALE).map(b => <option key={b.id} value={b.id}>{b.name} ({b.plate})</option>)}
@@ -216,9 +235,16 @@ const BirdList: React.FC<BirdListProps> = ({ birds, onAddBird, onUpdateBird, tra
           birds={birds} 
           trainingLogs={trainingLogs}
           onClose={() => setSelectedBird(null)} 
+          farmName={farmName}
           onUpdate={(updated) => {
             onUpdateBird(updated);
             setSelectedBird(updated);
+          }}
+          onDelete={(id) => {
+            if (window.confirm('¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.')) {
+              onDeleteBird(id);
+              setSelectedBird(null);
+            }
           }}
         />
       )}
@@ -252,7 +278,7 @@ const StatusBadge: React.FC<{ status: BirdStatus }> = ({ status }) => {
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${configs[status]}`}>{status}</span>;
 };
 
-const BirdDetailModal: React.FC<{ bird: BirdType, birds: BirdType[], trainingLogs: TrainingLog[], onClose: () => void, onUpdate: (b: BirdType) => void }> = ({ bird, birds, trainingLogs, onClose, onUpdate }) => {
+const BirdDetailModal: React.FC<{ bird: BirdType, birds: BirdType[], trainingLogs: TrainingLog[], onClose: () => void, farmName: string, onUpdate: (b: BirdType) => void, onDelete: (id: string) => void }> = ({ bird, birds, trainingLogs, onClose, farmName, onUpdate, onDelete }) => {
   const father = birds.find(b => b.id === bird.fatherId);
   const mother = birds.find(b => b.id === bird.motherId);
   
@@ -273,6 +299,13 @@ const BirdDetailModal: React.FC<{ bird: BirdType, birds: BirdType[], trainingLog
           <img src={bird.image} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
           <div className="absolute top-6 right-6 flex gap-3">
+             <button 
+                onClick={() => onDelete(bird.id)}
+                className="p-2 bg-rose-500/20 border border-rose-500/30 backdrop-blur-md rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                title="Eliminar Registro"
+             >
+                <Trash2 size={20} />
+             </button>
              <button 
                 onClick={handlePrint}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black uppercase shadow-xl transition-all"
@@ -352,14 +385,13 @@ const BirdDetailModal: React.FC<{ bird: BirdType, birds: BirdType[], trainingLog
         </div>
       </div>
 
-      {/* Versión para imprimir: Sólo visible al imprimir */}
       <div className="hidden print:block fixed inset-0 bg-white p-0 m-0 print-block overflow-visible">
         <div className="w-full max-w-[210mm] mx-auto p-12 bg-white text-slate-900 min-h-screen border-[12px] border-amber-500/10">
           <div className="flex justify-between items-start border-b-4 border-amber-500 pb-8 mb-10">
             <div>
               <h1 className="text-5xl font-black text-slate-950 uppercase leading-none">Certificado</h1>
               <p className="text-amber-600 font-black text-xl uppercase tracking-[0.2em] mt-2">Dossier de Desempeño Élite</p>
-              <p className="text-slate-400 font-bold uppercase text-xs mt-1">Granja "El Centenario" • GalloMaster Pro</p>
+              <p className="text-slate-400 font-bold uppercase text-xs mt-1">Galpón "{farmName}" • GalloMaster Pro</p>
             </div>
             <div className="text-right">
               <div className="bg-slate-950 text-white px-6 py-4 rounded-2xl mb-2">
@@ -442,34 +474,6 @@ const BirdDetailModal: React.FC<{ bird: BirdType, birds: BirdType[], trainingLog
               </div>
             </section>
           </div>
-
-          <section className="mb-10">
-            <h3 className="text-lg font-black uppercase text-slate-400 border-b-2 border-slate-100 pb-2 mb-4">Registro de Desempeño Reciente</h3>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="bg-amber-50 p-6 rounded-3xl border border-amber-200">
-                <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4">Combates Oficiales</h4>
-                {birdLogs.filter(l => l.activity.includes('Combate')).length > 0 ? (
-                  birdLogs.filter(l => l.activity.includes('Combate')).map(l => (
-                    <div key={l.id} className="flex justify-between py-2 border-b border-amber-100 text-xs">
-                      <span className="font-bold text-slate-700">{l.date}</span>
-                      <span className={`font-black uppercase ${l.result === 'Victoria' ? 'text-emerald-600' : 'text-rose-600'}`}>{l.result}</span>
-                    </div>
-                  ))
-                ) : <p className="text-[10px] italic text-amber-600">No hay combates registrados.</p>}
-              </div>
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Topas de Evaluación</h4>
-                {birdLogs.filter(l => l.activity.includes('Topa')).length > 0 ? (
-                  birdLogs.filter(l => l.activity.includes('Topa')).map(l => (
-                    <div key={l.id} className="flex justify-between py-2 border-b border-slate-100 text-xs">
-                      <span className="font-bold text-slate-700">{l.date}</span>
-                      <span className="text-slate-500 font-bold uppercase">{l.intensity} ({l.duration}m)</span>
-                    </div>
-                  ))
-                ) : <p className="text-[10px] italic text-slate-400">No hay topas registradas.</p>}
-              </div>
-            </div>
-          </section>
 
           <div className="mt-16 text-center">
             <div className="flex justify-center mb-6">
